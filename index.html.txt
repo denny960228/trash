@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>高雄市垃圾車即時位置圖</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5">
+
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+      }
+      #map {
+        height: 100vh;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+
+      function doGet(e) 
+      {
+        var headers = 
+        {
+          "Access-Control-Allow-Origin": "*", // 允許所有來源，您也可以修改為特定來源（例如 https://example.com）
+          "Access-Control-Allow-Methods": "GET, POST", // 允許的方法
+          "Access-Control-Allow-Headers": "Content-Type", // 允許的標頭
+          
+        };
+        // 假設您有一個函數叫 getData()，它返回需要的資料
+        var data = getData(); // 請替換成您實際的資料提取邏輯
+        var jsonOutput = ContentService.createTextOutput(JSON.stringify(data));
+        jsonOutput.setMimeType(ContentService.MimeType.JSON);
+        jsonOutput.setHeaders(headers); // 設置 CORS 標頭
+        return jsonOutput; // 返回結果
+        
+      }
+
+      async function get_data() {
+        try {
+          let res = await fetch("https://api.kcg.gov.tw/api/service/get/aaf4ce4b-4ca8-43de-bfaf-6dc97e89cac0");
+          var getdata = await res.json(); // 等待並解析 JSON 資料
+          var data = getdata.data;
+
+          
+
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition);
+          }
+          async function showPosition(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            // 傳送回 Apps Script
+            var map = L.map('map', {
+              center: [lat, lng],
+              zoom: 16,
+              zoomControl: true,
+              scrollWheelZoom: true,
+              doubleClickZoom: true,
+              touchZoom: true, // ✅ 手機手勢縮放
+            });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '&copy; OpenStreetMap 貢獻者'
+            }).addTo(map);
+            L.control.zoom({
+                position: 'bottomright' // 可改為 'topleft'、'bottomright'、'bottomleft'
+              }).addTo(map);
+            
+            for (let i=0;i<data.length;i++)
+            {
+              L.marker([Number(data[i]["y"]), Number(data[i]["x"])]).addTo(map).bindPopup("車牌: "+data[i]["car"]);
+            }
+            L.marker([lat, lng]).addTo(map).bindPopup("現在位置").openPopup();
+          }
+        } 
+        catch (error) {
+          console.error("載入資料失敗:", error); // 捕獲錯誤並顯示
+        }
+      }
+      
+      get_data();
+
+
+      
+      
+      
+    </script>
+  </body>
+</html>
